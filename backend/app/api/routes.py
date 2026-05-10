@@ -51,7 +51,6 @@ from app.models.schemas import (
     BinUpdateRequest,
     CreateBinRequest,
 )
-from app.constants import GF_GRID
 from app.services.image_processor import ImageProcessor
 from app.services.ai_tracer import AITracer
 from app.services.polygon_scaler import PolygonScaler, ScaledPolygon, ScaledFingerHole
@@ -242,8 +241,8 @@ def _run_generate(
     insert_stl_url = None
     warning = None
     if getattr(gen_req, 'insert_enabled', False) and scaled:
-        bin_width = gen_req.grid_x * GF_GRID
-        bin_depth = gen_req.grid_y * GF_GRID
+        bin_width = gen_req.grid_x * gen_req.grid_unit_x_mm
+        bin_depth = gen_req.grid_y * gen_req.grid_unit_y_mm
         offset_x = -bin_width / 2
         offset_y = -bin_depth / 2
         try:
@@ -920,13 +919,15 @@ async def create_bin(request: Request, req: CreateBinRequest, user_id: str = Dep
         needed_w = tool_width + 2 * clearance + 2 * wall + 0.5
         needed_h = tool_height + 2 * clearance + 2 * wall + 0.5
 
-        grid_x = max(1, int((needed_w + GF_GRID - 1) // GF_GRID))
-        grid_y = max(1, int((needed_h + GF_GRID - 1) // GF_GRID))
+        gux = bc.grid_unit_x_mm
+        guy = bc.grid_unit_y_mm
+        grid_x = max(1, int((needed_w + gux - 1) // gux))
+        grid_y = max(1, int((needed_h + guy - 1) // guy))
         bc.grid_x = min(grid_x, 10)
         bc.grid_y = min(grid_y, 10)
 
-        bin_w = bc.grid_x * GF_GRID
-        bin_h = bc.grid_y * GF_GRID
+        bin_w = bc.grid_x * gux
+        bin_h = bc.grid_y * guy
         offset_x = bin_w / 2
         offset_y = bin_h / 2
         for pt in placed:
@@ -1041,6 +1042,9 @@ def generate_bin_stl(request: Request, bin_id: str, user_id: str = Depends(get_u
     gen_req = GenerateRequest(
         grid_x=bc.grid_x,
         grid_y=bc.grid_y,
+        grid_unit_x_mm=bc.grid_unit_x_mm,
+        grid_unit_y_mm=bc.grid_unit_y_mm,
+        grid_unit_locked=bc.grid_unit_locked,
         height_units=bc.height_units,
         magnets=bc.magnets,
         magnet_diameter=bc.magnet_diameter,

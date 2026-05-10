@@ -1,8 +1,11 @@
+import type { SnapMode } from './constants'
+
 export interface UserSettings {
   bedSize: number
+  snapMode: SnapMode
 }
 
-const DEFAULTS: UserSettings = { bedSize: 256 }
+const DEFAULTS: UserSettings = { bedSize: 256, snapMode: 'fixed-5' }
 const KEY = 'tracefinity-settings'
 
 export function getSettings(): UserSettings {
