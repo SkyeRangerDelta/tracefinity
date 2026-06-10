@@ -3,13 +3,13 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useParams } from 'next/navigation'
 import { Loader2, Check, Download } from 'lucide-react'
-import Link from 'next/link'
-import { getTool, updateTool, getToolSvgUrl } from '@/lib/api'
+import { getTool, updateTool, getToolSvgUrl, ApiError } from '@/lib/api'
 import { useDebouncedSave } from '@/hooks/useDebouncedSave'
 import { ToolEditor } from '@/components/ToolEditor'
+import { ShapeDesigner } from '@/components/ShapeDesigner'
 import { Alert } from '@/components/Alert'
 import { Breadcrumb } from '@/components/Breadcrumb'
-import type { Tool, Point, FingerHole } from '@/types'
+import type { Tool, Point, FingerHole, ToolShape } from '@/types'
 
 export default function ToolPage() {
   const params = useParams()
@@ -19,6 +19,8 @@ export default function ToolPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [name, setName] = useState('')
+  const [materializeError, setMaterializeError] = useState<string | null>(null)
+
   useEffect(() => {
     async function load() {
       try {
@@ -37,10 +39,50 @@ export default function ToolPage() {
   const { saving, saved } = useDebouncedSave(
     async () => {
       if (!tool) return
-      await updateTool(toolId, { name, points: tool.points, finger_holes: tool.finger_holes, interior_rings: tool.interior_rings, smoothed: tool.smoothed, smooth_level: tool.smooth_level })
+      if (tool.shapes != null) {
+        const sent = tool.shapes
+        try {
+          const ret = await updateTool(toolId, {
+            name,
+            shapes: sent,
+            clearance_override: tool.clearance_override ?? null,
+          })
+          setMaterializeError(null)
+          // apply the authoritative materialized outline; only adopt the
+          // recentred shapes when no newer local edit is pending
+          setTool((prev) => {
+            if (!prev || prev.shapes == null) return prev
+            const sameShapes = JSON.stringify(prev.shapes) === JSON.stringify(sent)
+            const nextShapes = sameShapes ? (ret.shapes ?? prev.shapes) : prev.shapes
+            if (
+              JSON.stringify(prev.points) === JSON.stringify(ret.points) &&
+              JSON.stringify(prev.interior_rings) === JSON.stringify(ret.interior_rings) &&
+              JSON.stringify(prev.shapes) === JSON.stringify(nextShapes)
+            ) {
+              return prev
+            }
+            return { ...prev, points: ret.points, interior_rings: ret.interior_rings, shapes: nextShapes }
+          })
+        } catch (err) {
+          if (err instanceof ApiError && err.status === 422) {
+            setMaterializeError(err.message)
+            return
+          }
+          throw err
+        }
+      } else {
+        await updateTool(toolId, {
+          name,
+          points: tool.points,
+          finger_holes: tool.finger_holes,
+          interior_rings: tool.interior_rings,
+          smoothed: tool.smoothed,
+          smooth_level: tool.smooth_level,
+        })
+      }
     },
     [tool, name, toolId],
-    150,
+    300,
     { skipInitial: true }
   )
 
@@ -64,6 +106,25 @@ export default function ToolPage() {
     setTool(prev => prev ? { ...prev, interior_rings } : null)
   }, [])
 
+  const handleShapesChange = useCallback((shapes: ToolShape[]) => {
+    setTool(prev => prev ? { ...prev, shapes } : null)
+  }, [])
+
+  const handleClearanceChange = useCallback((clearance_override: number | null) => {
+    setTool(prev => prev ? { ...prev, clearance_override } : null)
+  }, [])
+
+  const handleConvertToPolygon = useCallback(async () => {
+    if (!window.confirm('Convert to a freeform polygon? The shape parameters are discarded and this cannot be undone.')) return
+    try {
+      const ret = await updateTool(toolId, { shapes: null })
+      setMaterializeError(null)
+      setTool(prev => prev ? { ...prev, shapes: null, points: ret.points, interior_rings: ret.interior_rings } : prev)
+    } catch {
+      // keep the designer open; the next autosave will surface errors
+    }
+  }, [toolId])
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12 gap-2 text-text-muted">
@@ -80,6 +141,8 @@ export default function ToolPage() {
       </div>
     )
   }
+
+  const isParametric = tool.shapes != null
 
   return (
     <div className="h-[calc(100vh-44px)] relative overflow-hidden">
@@ -105,18 +168,31 @@ export default function ToolPage() {
       </div>
 
       {/* editor fills the entire area */}
-      <ToolEditor
-        points={tool.points}
-        fingerHoles={tool.finger_holes}
-        interiorRings={tool.interior_rings}
-        smoothed={tool.smoothed}
-        smoothLevel={tool.smooth_level}
-        onPointsChange={handlePointsChange}
-        onFingerHolesChange={handleFingerHolesChange}
-        onSmoothedChange={handleSmoothedChange}
-        onSmoothLevelChange={handleSmoothLevelChange}
-        onInteriorRingsChange={handleInteriorRingsChange}
-      />
+      {isParametric ? (
+        <ShapeDesigner
+          shapes={tool.shapes!}
+          outlinePoints={tool.points}
+          outlineRings={tool.interior_rings}
+          clearanceOverride={tool.clearance_override ?? null}
+          materializeError={materializeError}
+          onShapesChange={handleShapesChange}
+          onClearanceChange={handleClearanceChange}
+          onConvertToPolygon={handleConvertToPolygon}
+        />
+      ) : (
+        <ToolEditor
+          points={tool.points}
+          fingerHoles={tool.finger_holes}
+          interiorRings={tool.interior_rings}
+          smoothed={tool.smoothed}
+          smoothLevel={tool.smooth_level}
+          onPointsChange={handlePointsChange}
+          onFingerHolesChange={handleFingerHolesChange}
+          onSmoothedChange={handleSmoothedChange}
+          onSmoothLevelChange={handleSmoothLevelChange}
+          onInteriorRingsChange={handleInteriorRingsChange}
+        />
+      )}
     </div>
   )
 }
