@@ -73,6 +73,7 @@ tracefinity/
 │   │       ├── constants.ts           # shared constants
 │   │       ├── shapes.ts              # shape geometry (salient points, bounds, projection)
 │   │       ├── shapeSnap.ts           # designer snapping engine
+│   │       ├── packing.ts             # auto-arrange shelf packing for placed tools
 │   │       └── svg.ts                 # polygon path, smoothing, snap, measurements
 │   └── package.json
 ├── .github/workflows/
