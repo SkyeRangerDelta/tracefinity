@@ -135,6 +135,10 @@ No API key and prefer not to use the local model? Upload a mask manually:
 
 [Gridfinity](https://gridfinity.xyz/) is a modular storage system designed by [Zack Freedman](https://www.youtube.com/watch?v=ra_9zU-mnl8). Bins snap into baseplates on a 42mm grid, making it easy to organise tools, components, and supplies. The system is open source and hugely popular in the 3D printing community.
 
+## AI Disclosure
+
+Parts of this project were developed with the assistance of AI coding tools (Claude Code). AI was used to help design, implement, and document features such as the parametric shape tools, CAD-style shape designer, and auto-arrange packing. All AI-assisted contributions were reviewed by a human before being merged.
+
 ## Licence
 
 MIT
