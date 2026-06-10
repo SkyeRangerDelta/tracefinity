@@ -16,7 +16,9 @@ export function useHistory<T>(
   const [index, setIndex] = useState(0)
   const isUndoRedoRef = useRef(false)
   const onChangeRef = useRef(onChange)
-  onChangeRef.current = onChange
+  useEffect(() => {
+    onChangeRef.current = onChange
+  }, [onChange])
 
   const canUndo = index > 0
   const canRedo = index < entries.length - 1

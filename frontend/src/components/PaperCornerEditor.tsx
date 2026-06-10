@@ -38,6 +38,9 @@ export function PaperCornerEditor({ imageUrl, corners, onCornersChange }: Props)
     }
     img.src = imageUrl
     return () => { cancelled = true }
+    // intentionally keyed off imageUrl only: corners/onCornersChange are read
+    // once at load to seed defaults; including them would reload on every drag
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [imageUrl])
 
   // fit container to available space while preserving aspect ratio

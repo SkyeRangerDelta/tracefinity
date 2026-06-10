@@ -118,6 +118,23 @@ export interface BinConfig {
 
 // --- tool library ---
 
+export type ToolShapeType = 'rectangle' | 'ellipse' | 'line'
+export type ToolShapeMode = 'add' | 'subtract' | 'guide'
+
+export interface ToolShape {
+  id: string
+  type: ToolShapeType
+  mode: ToolShapeMode
+  x: number
+  y: number
+  rotation: number
+  width?: number | null // rectangle; line length when type="line"
+  height?: number | null
+  corner_radius?: number
+  rx?: number | null // ellipse semi-axes (circle when rx == ry)
+  ry?: number | null
+}
+
 export interface Tool {
   id: string
   name: string
@@ -128,6 +145,8 @@ export interface Tool {
   smooth_level: number
   source_session_id: string | null
   created_at: string | null
+  shapes?: ToolShape[] | null
+  clearance_override?: number | null
 }
 
 export interface ToolSummary {
@@ -140,6 +159,7 @@ export interface ToolSummary {
   smoothed: boolean
   smooth_level: number
   thumbnail_url: string | null
+  parametric: boolean
 }
 
 // --- bins ---

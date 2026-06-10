@@ -32,6 +32,7 @@ tracefinity/
 │   │       ├── ai_tracer.py              # Gemini mask + contour tracing
 │   │       ├── image_processor.py         # paper detection + perspective
 │   │       ├── polygon_scaler.py          # px-to-mm, clearance, smoothing
+│   │       ├── shape_compiler.py          # parametric shapes -> outline (shapely booleans)
 │   │       ├── stl_generator_manifold.py  # gridfinity STL + bin splitting
 │   │       ├── bin_service.py             # placed-tool sync logic
 │   │       ├── image_service.py           # tool thumbnail generation
@@ -55,6 +56,11 @@ tracefinity/
 │   │   │   ├── ToolEditor.tsx         # tool editor orchestrator
 │   │   │   ├── ToolEditorToolbar.tsx  # tool toolbar (mode, smooth, undo)
 │   │   │   ├── ToolEditorCanvas.tsx   # tool SVG canvas
+│   │   │   ├── ShapeDesigner.tsx      # parametric designer (tools with `shapes`)
+│   │   │   ├── ShapeDesignerCanvas.tsx # designer SVG canvas, mask boolean preview
+│   │   │   ├── ShapeListPanel.tsx     # shape rows with exact-mm inputs
+│   │   │   ├── MeasurementOverlay.tsx # edge length / corner angle labels
+│   │   │   ├── NumberField.tsx        # commit-on-blur numeric input
 │   │   │   ├── ToolBrowser.tsx        # sidebar tool picker for bins
 │   │   │   ├── PolygonEditor.tsx      # trace-time polygon editor
 │   │   │   ├── CutoutOverlay.tsx      # finger hole SVG rendering
@@ -65,7 +71,10 @@ tracefinity/
 │   │   └── lib/
 │   │       ├── api.ts                 # API client
 │   │       ├── constants.ts           # shared constants
-│   │       └── svg.ts                 # polygon path, smoothing, snap
+│   │       ├── shapes.ts              # shape geometry (salient points, bounds, projection)
+│   │       ├── shapeSnap.ts           # designer snapping engine
+│   │       ├── packing.ts             # auto-arrange shelf packing for placed tools
+│   │       └── svg.ts                 # polygon path, smoothing, snap, measurements
 │   └── package.json
 ├── .github/workflows/
 │   ├── docker-dev.yml      # build on push to main

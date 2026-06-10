@@ -1,6 +1,14 @@
 {
+  "permissions": {
+    "allow": [
+      "Bash(npx tsc *)",
+      "Bash(npx vitest *)",
+      "Bash(sed -n '1,8p' src/components/BinConfigurator.test.ts)",
+      "Bash(npm run *)"
+    ]
+  },
+  "enableAllProjectMcpServers": true,
   "enabledMcpjsonServers": [
     "ssh"
-  ],
-  "enableAllProjectMcpServers": true
+  ]
 }

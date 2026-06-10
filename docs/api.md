@@ -13,10 +13,19 @@
 - `DELETE /api/sessions/{id}` - delete session
 
 ## Tools (library)
-- `GET /api/tools` - list tools
+- `GET /api/tools` - list tools (`parametric` flag marks shape-designed tools)
 - `GET /api/tools/{id}` - get tool
-- `PUT /api/tools/{id}` - update tool (name, points, finger_holes)
+- `POST /api/tools` - create a parametric tool from shape primitives (defaults to a 40x40 rect)
+- `PUT /api/tools/{id}` - update tool, returns the full Tool. For parametric tools, send `shapes`
+  (compiled server-side into points/interior_rings; 422 if the result isn't a single connected
+  outline) -- direct `points` edits are rejected until `shapes: null` detaches it to a plain
+  polygon. `clearance_override` (mm) beats the bin's `cutout_clearance` during generation.
 - `DELETE /api/tools/{id}` - delete tool
+
+Shape primitives (`ToolShape`): `rectangle` (width/height/corner_radius), `ellipse` (rx/ry),
+`line` (guide only); `mode` is `add` | `subtract` (island) | `guide` (construction, excluded
+from the outline). All dimensions mm, positions in tool space, materialization recentres the
+result on the bounding-box midpoint. See `backend/app/services/shape_compiler.py`.
 
 ## Bins
 - `GET /api/bins` - list bins

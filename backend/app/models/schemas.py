@@ -214,6 +214,22 @@ class StatusResponse(BaseModel):
 
 # --- tool library ---
 
+class ToolShape(BaseModel):
+    """parametric 2D primitive for designer-made tools. all dimensions in mm,
+    positions in tool space (origin = tool centre)."""
+    id: str
+    type: Literal["rectangle", "ellipse", "line"] = "rectangle"  # "line" only valid as a guide
+    mode: Literal["add", "subtract", "guide"] = "add"  # guide = construction geometry, never part of the outline
+    x: float = 0.0  # shape centre
+    y: float = 0.0
+    rotation: float = 0.0  # degrees
+    width: float | None = None  # rectangle; line length when type="line"
+    height: float | None = None  # rectangle
+    corner_radius: float = 0.0  # rectangle
+    rx: float | None = None  # ellipse semi-axes (circle when rx == ry)
+    ry: float | None = None
+
+
 class Tool(BaseModel):
     id: str
     name: str
@@ -225,6 +241,9 @@ class Tool(BaseModel):
     source_session_id: str | None = None
     thumbnail_path: str | None = None
     created_at: str | None = None
+    # parametric shape source; when set, points/interior_rings are materialized from it
+    shapes: list[ToolShape] | None = None
+    clearance_override: float | None = None  # mm; None = bin's cutout_clearance
 
 
 class ToolSummary(BaseModel):
@@ -237,6 +256,7 @@ class ToolSummary(BaseModel):
     smoothed: bool = False
     smooth_level: float = 0.5
     thumbnail_url: str | None = None
+    parametric: bool = False
 
 
 class ToolUpdateRequest(BaseModel):
@@ -246,6 +266,14 @@ class ToolUpdateRequest(BaseModel):
     interior_rings: list[list[Point]] | None = None
     smoothed: bool | None = None
     smooth_level: float | None = None
+    # explicit null detaches a parametric tool to a plain polygon
+    shapes: list[ToolShape] | None = None
+    clearance_override: float | None = None
+
+
+class CreateToolRequest(BaseModel):
+    name: str = "New shape"
+    shapes: list[ToolShape] | None = None  # None => default 40x40 rectangle
 
 
 class ToolListResponse(BaseModel):

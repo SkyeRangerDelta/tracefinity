@@ -12,6 +12,8 @@ interface Props {
   binWidthMm: number
   binHeightMm: number
   layout?: 'grid' | 'horizontal'
+  /** extra controls rendered in the horizontal-layout header row */
+  headerExtra?: React.ReactNode
 }
 
 function ToolThumbnail({ points, interiorRings }: { points: Point[]; interiorRings?: Point[][] }) {
@@ -48,7 +50,7 @@ function ToolThumbnail({ points, interiorRings }: { points: Point[]; interiorRin
   )
 }
 
-export function ToolBrowser({ onAddTool, binWidthMm, binHeightMm, layout = 'grid' }: Props) {
+export function ToolBrowser({ onAddTool, binWidthMm, binHeightMm, layout = 'grid', headerExtra }: Props) {
   const [tools, setTools] = useState<ToolSummary[]>([])
   const [loading, setLoading] = useState(true)
   const [adding, setAdding] = useState<string | null>(null)
@@ -127,6 +129,7 @@ export function ToolBrowser({ onAddTool, binWidthMm, binHeightMm, layout = 'grid
         <div className="flex items-center gap-2">
           <h3 className="text-[10px] font-semibold text-text-muted uppercase tracking-[1.5px]">Library</h3>
           <span className="text-[10px] text-text-muted bg-elevated px-1.5 py-px rounded-full">{tools.length}</span>
+          {headerExtra}
           {tools.length > 4 && (
             <div className="relative ml-auto">
               <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-text-muted" />

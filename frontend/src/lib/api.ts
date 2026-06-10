@@ -209,11 +209,29 @@ export async function getTool(toolId: string): Promise<Tool> {
   return fetchApi(`/api/tools/${toolId}`)
 }
 
+export async function createTool(
+  opts: { name?: string; shapes?: import('@/types').ToolShape[] } = {}
+): Promise<Tool> {
+  return fetchApi('/api/tools', {
+    method: 'POST',
+    body: JSON.stringify(opts),
+  })
+}
+
 export async function updateTool(
   toolId: string,
-  updates: { name?: string; points?: Point[]; finger_holes?: import('@/types').FingerHole[]; interior_rings?: Point[][]; smoothed?: boolean; smooth_level?: number }
-): Promise<void> {
-  await fetchApi(`/api/tools/${toolId}`, {
+  updates: {
+    name?: string
+    points?: Point[]
+    finger_holes?: import('@/types').FingerHole[]
+    interior_rings?: Point[][]
+    smoothed?: boolean
+    smooth_level?: number
+    shapes?: import('@/types').ToolShape[] | null
+    clearance_override?: number | null
+  }
+): Promise<Tool> {
+  return fetchApi(`/api/tools/${toolId}`, {
     method: 'PUT',
     body: JSON.stringify(updates),
   })

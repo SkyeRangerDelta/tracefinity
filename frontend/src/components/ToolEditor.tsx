@@ -3,7 +3,7 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react'
 import { Plus, Circle, Disc, Square, RectangleHorizontal, Fingerprint } from 'lucide-react'
 import type { Point, FingerHole } from '@/types'
-import { simplifyPolygon, smoothEpsilon, snapToGrid as snapToGridUtil } from '@/lib/svg'
+import { simplifyPolygon, smoothEpsilon, snapToGrid as snapToGridUtil, axisLock } from '@/lib/svg'
 import { DISPLAY_SCALE, SNAP_GRID, ZOOM_FACTOR } from '@/lib/constants'
 import { useHistory } from '@/hooks/useHistory'
 import { ToolEditorToolbar } from '@/components/ToolEditorToolbar'
@@ -26,7 +26,7 @@ interface Props {
 const PADDING_MM = 20
 
 type DragState =
-  | { type: 'vertex'; pointIdx: number }
+  | { type: 'vertex'; pointIdx: number; startPoint: Point }
   | { type: 'hole'; holeId: string; startX: number; startY: number; origX: number; origY: number }
   | { type: 'resize'; holeId: string; startX: number; startY: number; origRadius: number; origWidth?: number; origHeight?: number; centerX: number; centerY: number; anchorX?: number; anchorY?: number; rotation?: number }
   | { type: 'rotate-hole'; holeId: string; centerX: number; centerY: number; startAngle: number; origRotation: number }
@@ -46,6 +46,7 @@ export function ToolEditor({ points, fingerHoles, interiorRings, smoothed, smoot
   const [editMode, setEditMode] = useState<EditMode>('select')
   const [dragging, setDragging] = useState<DragState>(null)
   const [snapEnabled, setSnapEnabled] = useState(true)
+  const [showMeasurements, setShowMeasurements] = useState(false)
   const [zoom, setZoom] = useState(1)
   const [pan, setPan] = useState({ x: 0, y: 0 })
   const [cutoutOpen, setCutoutOpen] = useState(false)
@@ -59,7 +60,7 @@ export function ToolEditor({ points, fingerHoles, interiorRings, smoothed, smoot
     onInteriorRingsChange?.(entry.interiorRings)
   }, [onPointsChange, onFingerHolesChange, onInteriorRingsChange])
 
-  const currentRings = interiorRings ?? []
+  const currentRings = useMemo(() => interiorRings ?? [], [interiorRings])
 
   const { set: pushHistory, undo: handleUndo, redo: handleRedo, canUndo, canRedo } = useHistory<HistoryEntry>(
     { points, fingerHoles, interiorRings: currentRings },
@@ -321,7 +322,7 @@ export function ToolEditor({ points, fingerHoles, interiorRings, smoothed, smoot
       return
     }
     setSelection({ type: 'vertex', pointIdx })
-    setDragging({ type: 'vertex', pointIdx })
+    setDragging({ type: 'vertex', pointIdx, startPoint: points[pointIdx] })
   }
 
   const handleEdgeClick = (edgeIdx: number) => (e: React.MouseEvent) => {
@@ -438,14 +439,30 @@ export function ToolEditor({ points, fingerHoles, interiorRings, smoothed, smoot
 
     if (dragging.type === 'vertex') {
       const updated = [...currentPoints]
-      updated[dragging.pointIdx] = { x: snap(pos.x), y: snap(pos.y) }
+      if (e.shiftKey) {
+        // shift constrains movement to the dominant cardinal axis; the
+        // locked axis stays exactly put, even off-grid
+        const d = axisLock(pos.x - dragging.startPoint.x, pos.y - dragging.startPoint.y)
+        updated[dragging.pointIdx] = {
+          x: d.dx === 0 ? dragging.startPoint.x : snap(dragging.startPoint.x + d.dx),
+          y: d.dy === 0 ? dragging.startPoint.y : snap(dragging.startPoint.y + d.dy),
+        }
+      } else {
+        updated[dragging.pointIdx] = { x: snap(pos.x), y: snap(pos.y) }
+      }
       setDragPoints(updated)
     } else if (dragging.type === 'hole') {
-      const dx = pos.x - dragging.startX
-      const dy = pos.y - dragging.startY
+      let dx = pos.x - dragging.startX
+      let dy = pos.y - dragging.startY
+      const locked = e.shiftKey
+      if (locked) ({ dx, dy } = axisLock(dx, dy))
       const updated = currentHoles.map(fh => {
         if (fh.id !== dragging.holeId) return fh
-        return { ...fh, x: snap(dragging.origX + dx), y: snap(dragging.origY + dy) }
+        return {
+          ...fh,
+          x: locked && dx === 0 ? dragging.origX : snap(dragging.origX + dx),
+          y: locked && dy === 0 ? dragging.origY : snap(dragging.origY + dy),
+        }
       })
       setDragHoles(updated)
     } else if (dragging.type === 'resize') {
@@ -589,6 +606,7 @@ export function ToolEditor({ points, fingerHoles, interiorRings, smoothed, smoot
         displayPoints={displayPoints}
         smoothed={smoothed}
         interiorRings={interiorRings}
+        showMeasurements={showMeasurements}
         points={points}
         editMode={editMode}
         selection={selection}
@@ -613,6 +631,8 @@ export function ToolEditor({ points, fingerHoles, interiorRings, smoothed, smoot
           onSmoothLevelChange={onSmoothLevelChange}
           snapEnabled={snapEnabled}
           setSnapEnabled={setSnapEnabled}
+          showMeasurements={showMeasurements}
+          setShowMeasurements={setShowMeasurements}
           canUndo={canUndo}
           canRedo={canRedo}
           handleUndo={handleUndo}
