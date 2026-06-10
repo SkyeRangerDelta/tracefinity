@@ -90,11 +90,18 @@ function NameModal({ open, onConfirm, onCancel }: {
   const [value, setValue] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
 
+  // reset the field each time the modal opens -- adjust during render rather
+  // than in an effect to avoid a cascading re-render
+  const [wasOpen, setWasOpen] = useState(open)
+  if (open !== wasOpen) {
+    setWasOpen(open)
+    if (open) setValue('')
+  }
+
   useEffect(() => {
-    if (open) {
-      setValue('')
-      setTimeout(() => inputRef.current?.focus(), 50)
-    }
+    if (!open) return
+    const t = setTimeout(() => inputRef.current?.focus(), 50)
+    return () => clearTimeout(t)
   }, [open])
 
   useEffect(() => {

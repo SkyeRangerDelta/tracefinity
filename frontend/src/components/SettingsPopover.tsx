@@ -8,12 +8,8 @@ import { NumberField } from '@/components/NumberField'
 
 export function SettingsPopover() {
   const [open, setOpen] = useState(false)
-  const [bedSize, setBedSize] = useState(256)
+  const [bedSize, setBedSize] = useState(() => getSettings().bedSize)
   const ref = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    setBedSize(getSettings().bedSize)
-  }, [])
 
   useEffect(() => {
     if (!open) return

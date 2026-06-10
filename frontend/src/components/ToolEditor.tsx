@@ -60,7 +60,7 @@ export function ToolEditor({ points, fingerHoles, interiorRings, smoothed, smoot
     onInteriorRingsChange?.(entry.interiorRings)
   }, [onPointsChange, onFingerHolesChange, onInteriorRingsChange])
 
-  const currentRings = interiorRings ?? []
+  const currentRings = useMemo(() => interiorRings ?? [], [interiorRings])
 
   const { set: pushHistory, undo: handleUndo, redo: handleRedo, canUndo, canRedo } = useHistory<HistoryEntry>(
     { points, fingerHoles, interiorRings: currentRings },

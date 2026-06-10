@@ -1,28 +1,54 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useSyncExternalStore } from 'react'
 import { Sun, Moon } from 'lucide-react'
 import { IconButton } from '@/components/IconButton'
 
-export function ThemeToggle() {
-  const [theme, setTheme] = useState<'dark' | 'light'>('dark')
+type Theme = 'dark' | 'light'
 
+const listeners = new Set<() => void>()
+
+function resolveTheme(): Theme {
+  const stored = localStorage.getItem('theme')
+  if (stored === 'light' || stored === 'dark') return stored
+  return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark'
+}
+
+function applyTheme(theme: Theme) {
+  document.documentElement.setAttribute('data-theme', theme)
+}
+
+function subscribe(callback: () => void): () => void {
+  listeners.add(callback)
+  const mq = window.matchMedia('(prefers-color-scheme: light)')
+  mq.addEventListener('change', callback)
+  return () => {
+    listeners.delete(callback)
+    mq.removeEventListener('change', callback)
+  }
+}
+
+// Server has no DOM/storage; render the default theme to match initial markup.
+function getServerSnapshot(): Theme {
+  return 'dark'
+}
+
+function setTheme(theme: Theme) {
+  localStorage.setItem('theme', theme)
+  applyTheme(theme)
+  listeners.forEach((l) => l())
+}
+
+export function ThemeToggle() {
+  const theme = useSyncExternalStore(subscribe, resolveTheme, getServerSnapshot)
+
+  // Reflect the resolved theme onto the DOM: initial load and OS-preference changes.
   useEffect(() => {
-    const stored = localStorage.getItem('theme')
-    if (stored === 'light' || stored === 'dark') {
-      setTheme(stored)
-      document.documentElement.setAttribute('data-theme', stored)
-    } else if (window.matchMedia('(prefers-color-scheme: light)').matches) {
-      setTheme('light')
-      document.documentElement.setAttribute('data-theme', 'light')
-    }
-  }, [])
+    applyTheme(theme)
+  }, [theme])
 
   function toggle() {
-    const next = theme === 'dark' ? 'light' : 'dark'
-    setTheme(next)
-    document.documentElement.setAttribute('data-theme', next)
-    localStorage.setItem('theme', next)
+    setTheme(theme === 'dark' ? 'light' : 'dark')
   }
 
   return (

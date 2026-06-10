@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { MousePointer2, Trash2, Magnet, Type, Pencil, Maximize2 } from 'lucide-react'
 import type { FingerHole, PlacedTool, TextLabel } from '@/types'
 import { SNAP_GRID } from '@/lib/constants'
@@ -16,10 +16,13 @@ interface DepthInputProps {
 function DepthInput({ value, defaultDepth, maxDepth, onCommit, resetKey }: DepthInputProps) {
   const [text, setText] = useState<string>(value == null ? '' : String(value))
 
-  // sync local text when the selected item changes (resetKey switches)
-  useEffect(() => {
+  // sync local text when the selected item changes (resetKey switches) or the
+  // committed value updates -- adjusting during render avoids a cascading effect
+  const [synced, setSynced] = useState({ resetKey, value })
+  if (synced.resetKey !== resetKey || synced.value !== value) {
+    setSynced({ resetKey, value })
     setText(value == null ? '' : String(value))
-  }, [resetKey, value])
+  }
 
   const commit = (raw: string) => {
     const trimmed = raw.trim()

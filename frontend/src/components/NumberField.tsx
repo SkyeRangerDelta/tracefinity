@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 
 interface NumberFieldProps {
   value: number | null
@@ -45,10 +45,14 @@ export function NumberField({
   const [text, setText] = useState(() => format(value, step))
   const [focused, setFocused] = useState(false)
 
-  // follow external changes (e.g. paired slider drags) while not being typed in
-  useEffect(() => {
-    if (!focused) setText(format(value, step))
-  }, [value, step, focused])
+  // follow external changes (e.g. paired slider drags) while not being typed in.
+  // adjusting during render (vs an effect) is the recommended pattern for
+  // state derived from props -- avoids an extra render and a cascading update.
+  const [synced, setSynced] = useState({ value, step })
+  if (!focused && (synced.value !== value || synced.step !== step)) {
+    setSynced({ value, step })
+    setText(format(value, step))
+  }
 
   const revert = () => setText(format(value, step))
 
