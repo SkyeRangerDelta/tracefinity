@@ -1,7 +1,7 @@
 'use client'
 
 import { ReactNode } from 'react'
-import { MousePointer2, Plus, Minus, Undo2, Redo2, Trash2, Circle, Disc, Square, RectangleHorizontal, Fingerprint, Magnet, RotateCw, RotateCcw, FlipHorizontal2, FlipVertical2, ChevronDown, PaintBucket } from 'lucide-react'
+import { MousePointer2, Plus, Minus, Undo2, Redo2, Trash2, Circle, Disc, Square, RectangleHorizontal, Fingerprint, Magnet, RotateCw, RotateCcw, FlipHorizontal2, FlipVertical2, ChevronDown, PaintBucket, Ruler } from 'lucide-react'
 import type { FingerHole } from '@/types'
 import { SNAP_GRID } from '@/lib/constants'
 
@@ -21,6 +21,8 @@ interface Props {
   onSmoothLevelChange: (level: number) => void
   snapEnabled: boolean
   setSnapEnabled: (enabled: boolean) => void
+  showMeasurements: boolean
+  setShowMeasurements: (show: boolean) => void
   canUndo: boolean
   canRedo: boolean
   handleUndo: () => void
@@ -43,6 +45,7 @@ export function ToolEditorToolbar({
   editMode, setEditMode,
   smoothed, smoothLevel, onSmoothedChange, onSmoothLevelChange,
   snapEnabled, setSnapEnabled,
+  showMeasurements, setShowMeasurements,
   canUndo, canRedo, handleUndo, handleRedo,
   cutoutOpen, setCutoutOpen,
   isCutoutMode, cutoutModeIcon, cutoutModeLabel,
@@ -183,6 +186,16 @@ export function ToolEditorToolbar({
         >
           <Magnet className="w-3.5 h-3.5" />
           Snap
+        </button>
+        <button
+          onClick={() => setShowMeasurements(!showMeasurements)}
+          className={`px-2 py-1 rounded-[7px] text-[11px] flex items-center gap-1 transition-colors ${
+            showMeasurements ? 'bg-accent-muted text-accent' : 'hover:bg-border/50 text-text-secondary'
+          }`}
+          title="Show edge lengths and corner angles"
+        >
+          <Ruler className="w-3.5 h-3.5" />
+          Measure
         </button>
         <div className="flex items-center rounded-[7px] overflow-hidden border border-border-subtle text-[11px]">
           <button

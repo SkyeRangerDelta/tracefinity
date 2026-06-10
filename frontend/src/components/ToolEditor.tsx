@@ -46,6 +46,7 @@ export function ToolEditor({ points, fingerHoles, interiorRings, smoothed, smoot
   const [editMode, setEditMode] = useState<EditMode>('select')
   const [dragging, setDragging] = useState<DragState>(null)
   const [snapEnabled, setSnapEnabled] = useState(true)
+  const [showMeasurements, setShowMeasurements] = useState(false)
   const [zoom, setZoom] = useState(1)
   const [pan, setPan] = useState({ x: 0, y: 0 })
   const [cutoutOpen, setCutoutOpen] = useState(false)
@@ -589,6 +590,7 @@ export function ToolEditor({ points, fingerHoles, interiorRings, smoothed, smoot
         displayPoints={displayPoints}
         smoothed={smoothed}
         interiorRings={interiorRings}
+        showMeasurements={showMeasurements}
         points={points}
         editMode={editMode}
         selection={selection}
@@ -613,6 +615,8 @@ export function ToolEditor({ points, fingerHoles, interiorRings, smoothed, smoot
           onSmoothLevelChange={onSmoothLevelChange}
           snapEnabled={snapEnabled}
           setSnapEnabled={setSnapEnabled}
+          showMeasurements={showMeasurements}
+          setShowMeasurements={setShowMeasurements}
           canUndo={canUndo}
           canRedo={canRedo}
           handleUndo={handleUndo}
