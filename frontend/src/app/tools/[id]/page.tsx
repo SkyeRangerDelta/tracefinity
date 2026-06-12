@@ -46,6 +46,7 @@ export default function ToolPage() {
             name,
             shapes: sent,
             clearance_override: tool.clearance_override ?? null,
+            spacing_override: tool.spacing_override ?? null,
           })
           setMaterializeError(null)
           // apply the authoritative materialized outline; only adopt the
@@ -114,6 +115,10 @@ export default function ToolPage() {
     setTool(prev => prev ? { ...prev, clearance_override } : null)
   }, [])
 
+  const handleSpacingChange = useCallback((spacing_override: number | null) => {
+    setTool(prev => prev ? { ...prev, spacing_override } : null)
+  }, [])
+
   const handleConvertToPolygon = useCallback(async () => {
     if (!window.confirm('Convert to a freeform polygon? The shape parameters are discarded and this cannot be undone.')) return
     try {
@@ -174,9 +179,11 @@ export default function ToolPage() {
           outlinePoints={tool.points}
           outlineRings={tool.interior_rings}
           clearanceOverride={tool.clearance_override ?? null}
+          spacingOverride={tool.spacing_override ?? null}
           materializeError={materializeError}
           onShapesChange={handleShapesChange}
           onClearanceChange={handleClearanceChange}
+          onSpacingChange={handleSpacingChange}
           onConvertToPolygon={handleConvertToPolygon}
         />
       ) : (
