@@ -89,6 +89,7 @@ class BinParams(BaseModel):
     insert_enabled: bool = False
     insert_height: float = 1.0
     cutout_chamfer: float = 0.0
+    tool_spacing: float = 0.0  # mm; keep-out air gap beyond each cutout when arranging
 
     @field_validator("grid_x", "grid_y")
     @classmethod
@@ -123,6 +124,13 @@ class BinParams(BaseModel):
     def validate_clearance(cls, v: float) -> float:
         if v < 0 or v > 10:
             raise ValueError("clearance must be between 0 and 10mm")
+        return v
+
+    @field_validator("tool_spacing")
+    @classmethod
+    def validate_tool_spacing(cls, v: float) -> float:
+        if v < 0 or v > 20:
+            raise ValueError("tool spacing must be between 0 and 20mm")
         return v
 
     @field_validator("insert_height")
@@ -244,6 +252,7 @@ class Tool(BaseModel):
     # parametric shape source; when set, points/interior_rings are materialized from it
     shapes: list[ToolShape] | None = None
     clearance_override: float | None = None  # mm; None = bin's cutout_clearance
+    spacing_override: float | None = None  # mm; None = bin's tool_spacing
 
 
 class ToolSummary(BaseModel):
@@ -257,6 +266,8 @@ class ToolSummary(BaseModel):
     smooth_level: float = 0.5
     thumbnail_url: str | None = None
     parametric: bool = False
+    clearance_override: float | None = None
+    spacing_override: float | None = None
 
 
 class ToolUpdateRequest(BaseModel):
@@ -269,6 +280,7 @@ class ToolUpdateRequest(BaseModel):
     # explicit null detaches a parametric tool to a plain polygon
     shapes: list[ToolShape] | None = None
     clearance_override: float | None = None
+    spacing_override: float | None = None
 
 
 class CreateToolRequest(BaseModel):
