@@ -55,12 +55,12 @@ from app.models.schemas import (
 )
 from app.services.image_processor import ImageProcessor
 from app.services.ai_tracer import AITracer
-from app.services.polygon_scaler import PolygonScaler, ScaledPolygon, ScaledFingerHole
+from app.services.polygon_scaler import PolygonScaler, ScaledPolygon, ScaledFingerHole, ScaledLevelPart
 from app.services.stl_generator_manifold import ManifoldSTLGenerator
 from app.services.session_store import SessionStore
 from app.services.tool_store import ToolStore
 from app.services.bin_store import BinStore
-from app.services.bin_service import sync_placed_tools, resolve_clearance
+from app.services.bin_service import sync_placed_tools, resolve_clearance, placed_levels
 from app.services.image_service import generate_tool_thumbnail
 from app.services import shape_compiler
 router = APIRouter()
@@ -777,7 +777,7 @@ async def create_tool(request: Request, req: CreateToolRequest, user_id: str = D
         ToolShape(id=str(uuid.uuid4()), type="rectangle", mode="add", width=40.0, height=40.0)
     ]
     try:
-        points, interior_rings, offset = shape_compiler.compile_shapes(shapes)
+        points, interior_rings, offset, levels = shape_compiler.compile_shapes(shapes)
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))
 
@@ -788,6 +788,7 @@ async def create_tool(request: Request, req: CreateToolRequest, user_id: str = D
         points=points,
         interior_rings=interior_rings,
         shapes=shape_compiler.recentre_shapes(shapes, offset),
+        levels=levels,
         created_at=datetime.utcnow().isoformat(),
     )
     user_tools.set(tool_id, tool)
@@ -808,15 +809,17 @@ async def update_tool(request: Request, tool_id: str, req: ToolUpdateRequest, us
             if len(req.shapes) == 0:
                 raise HTTPException(status_code=422, detail="design needs at least one shape")
             try:
-                points, interior_rings, offset = shape_compiler.compile_shapes(req.shapes)
+                points, interior_rings, offset, levels = shape_compiler.compile_shapes(req.shapes)
             except ValueError as e:
                 raise HTTPException(status_code=422, detail=str(e))
             tool.shapes = shape_compiler.recentre_shapes(req.shapes, offset)
             tool.points = points
             tool.interior_rings = interior_rings
+            tool.levels = levels
         else:
             # explicit null detaches to a plain polygon, keeping materialized points
             tool.shapes = None
+            tool.levels = None
     elif tool.shapes is not None and (req.points is not None or req.interior_rings is not None):
         raise HTTPException(
             status_code=422,
@@ -1110,10 +1113,17 @@ def generate_bin_stl(request: Request, bin_id: str, user_id: str = Depends(get_u
     if not bin_data.placed_tools:
         raise HTTPException(status_code=400, detail="bin has no tools placed")
 
+    # re-derive placed geometry from the library tools so footprints and the
+    # levels derived below can never disagree (covers bins generated without
+    # an intervening GET, e.g. raw API or drawer flows)
+    if sync_placed_tools(bin_data, user_tools):
+        user_bins.set(bin_id, bin_data)
+
     bc = bin_data.bin_config
 
-    # include source tool smoothed/parametric/clearance state in hash so
-    # toggling any of them invalidates the cache
+    # include source tool smoothed/parametric/clearance/levels state in hash
+    # so toggling any of them invalidates the cache (a depth-only edit leaves
+    # the placed footprint unchanged, so levels must hash explicitly)
     smoothed_flags = {}
     for pt in bin_data.placed_tools:
         src = user_tools.get(pt.tool_id)
@@ -1122,6 +1132,7 @@ def generate_bin_stl(request: Request, bin_id: str, user_id: str = Depends(get_u
             "smooth_level": src.smooth_level if src else 0.5,
             "parametric": src.shapes is not None if src else False,
             "clearance_override": src.clearance_override if src else None,
+            "levels": [l.model_dump() for l in (src.levels or [])] if src else [],
         }
     input_data = {
         "bin_config": bc.model_dump(),
@@ -1147,8 +1158,20 @@ def generate_bin_stl(request: Request, bin_id: str, user_id: str = Depends(get_u
             [(p.x, p.y) for p in ring]
             for ring in pt.interior_rings
         ]
-        sp = ScaledPolygon(pt.id, points_mm, pt.name, fholes, interior_rings_mm, depth_override=pt.depth_override)
         source_tool = user_tools.get(pt.tool_id)
+        level_parts = None
+        bin_levels = placed_levels(source_tool, pt)
+        if bin_levels:
+            level_parts = [
+                ScaledLevelPart(
+                    level.depth,
+                    [(p.x, p.y) for p in part.points],
+                    [[(p.x, p.y) for p in ring] for ring in part.interior_rings],
+                )
+                for level in bin_levels
+                for part in level.parts
+            ]
+        sp = ScaledPolygon(pt.id, points_mm, pt.name, fholes, interior_rings_mm, depth_override=pt.depth_override, levels=level_parts)
         sp = polygon_scaler.add_clearance(sp, resolve_clearance(source_tool, bc.cutout_clearance))
         if source_tool and source_tool.shapes:
             # parametric outlines are exact; only strip collinear points
