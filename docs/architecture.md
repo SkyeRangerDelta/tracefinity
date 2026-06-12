@@ -86,8 +86,8 @@ tracefinity/
 
 ## Data Model
 
-- **Tool**: a single traced polygon + finger holes, stored in mm, centred at origin. Lives in a persistent library (`tools.json`).
-- **PlacedTool**: a positioned copy of a tool in a bin. Points/holes in bin-space mm. Has `tool_id` linking back to source.
+- **Tool**: a single traced polygon + finger holes, stored in mm, centred at origin. Lives in a persistent library (`tools.json`). Parametric tools also store `shapes` (and `levels` when any add-shape has a depth); `clearance_override`/`spacing_override` beat the bin's `cutout_clearance`/`tool_spacing`.
+- **PlacedTool**: a positioned copy of a tool in a bin. Points/holes in bin-space mm. Has `tool_id` linking back to source. Never stores levels — those are re-derived from the library tool at generate time (`bin_service.placed_levels()`).
 - **Bin**: bin config + placed tools + text labels. Used for STL generation (`bins.json`).
 - **Session**: ephemeral, used only for upload/trace workflow. Output is tools saved to library via `save-tools`.
 
