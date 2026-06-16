@@ -110,6 +110,7 @@ export interface BinConfig {
   cutout_depth: number
   cutout_clearance: number
   cutout_chamfer: number
+  tool_spacing: number
   insert_enabled: boolean
   insert_height: number
   text_labels: TextLabel[]
@@ -133,6 +134,8 @@ export interface ToolShape {
   corner_radius?: number
   rx?: number | null // ellipse semi-axes (circle when rx == ry)
   ry?: number | null
+  // pocket depth in mm from the bin top; add-shapes only, null = bin default
+  depth?: number | null
 }
 
 export interface Tool {
@@ -147,6 +150,7 @@ export interface Tool {
   created_at: string | null
   shapes?: ToolShape[] | null
   clearance_override?: number | null
+  spacing_override?: number | null
 }
 
 export interface ToolSummary {
@@ -160,6 +164,8 @@ export interface ToolSummary {
   smooth_level: number
   thumbnail_url: string | null
   parametric: boolean
+  clearance_override?: number | null
+  spacing_override?: number | null
 }
 
 // --- bins ---

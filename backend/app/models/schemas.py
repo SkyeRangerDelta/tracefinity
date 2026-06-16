@@ -89,6 +89,7 @@ class BinParams(BaseModel):
     insert_enabled: bool = False
     insert_height: float = 1.0
     cutout_chamfer: float = 0.0
+    tool_spacing: float = 0.0  # mm; keep-out air gap beyond each cutout when arranging
 
     @field_validator("grid_x", "grid_y")
     @classmethod
@@ -123,6 +124,13 @@ class BinParams(BaseModel):
     def validate_clearance(cls, v: float) -> float:
         if v < 0 or v > 10:
             raise ValueError("clearance must be between 0 and 10mm")
+        return v
+
+    @field_validator("tool_spacing")
+    @classmethod
+    def validate_tool_spacing(cls, v: float) -> float:
+        if v < 0 or v > 20:
+            raise ValueError("tool spacing must be between 0 and 20mm")
         return v
 
     @field_validator("insert_height")
@@ -228,6 +236,29 @@ class ToolShape(BaseModel):
     corner_radius: float = 0.0  # rectangle
     rx: float | None = None  # ellipse semi-axes (circle when rx == ry)
     ry: float | None = None
+    # pocket depth in mm from the bin top; only meaningful for mode="add".
+    # None = the bin/placement default depth (single-level behaviour)
+    depth: float | None = None
+
+    @field_validator("depth")
+    @classmethod
+    def validate_shape_depth(cls, v: float | None) -> float | None:
+        if v is not None and (v < 1 or v > 200):
+            raise ValueError("shape depth must be between 1 and 200mm")
+        return v
+
+
+class ToolLevelPart(BaseModel):
+    """one connected component of a depth level's cross-section, tool space mm"""
+    points: list[Point]
+    interior_rings: list[list[Point]] = []
+
+
+class ToolLevel(BaseModel):
+    """materialized cross-section for one pocket depth. the pocket is the
+    union of each level extruded from the bin top down to its own depth."""
+    depth: float | None = None  # None = the default-depth group
+    parts: list[ToolLevelPart]
 
 
 class Tool(BaseModel):
@@ -244,6 +275,9 @@ class Tool(BaseModel):
     # parametric shape source; when set, points/interior_rings are materialized from it
     shapes: list[ToolShape] | None = None
     clearance_override: float | None = None  # mm; None = bin's cutout_clearance
+    spacing_override: float | None = None  # mm; None = bin's tool_spacing
+    # materialized per-depth cross-sections; None unless a shape has a depth
+    levels: list[ToolLevel] | None = None
 
 
 class ToolSummary(BaseModel):
@@ -257,6 +291,8 @@ class ToolSummary(BaseModel):
     smooth_level: float = 0.5
     thumbnail_url: str | None = None
     parametric: bool = False
+    clearance_override: float | None = None
+    spacing_override: float | None = None
 
 
 class ToolUpdateRequest(BaseModel):
@@ -269,6 +305,7 @@ class ToolUpdateRequest(BaseModel):
     # explicit null detaches a parametric tool to a plain polygon
     shapes: list[ToolShape] | None = None
     clearance_override: float | None = None
+    spacing_override: float | None = None
 
 
 class CreateToolRequest(BaseModel):

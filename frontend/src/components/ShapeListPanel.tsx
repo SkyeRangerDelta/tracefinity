@@ -12,6 +12,8 @@ interface Props {
   onShapesChange: (shapes: ToolShape[]) => void
   clearanceOverride: number | null
   onClearanceChange: (v: number | null) => void
+  spacingOverride: number | null
+  onSpacingChange: (v: number | null) => void
   materializeError: string | null
   onConvertToPolygon: () => void
 }
@@ -47,6 +49,8 @@ export function ShapeListPanel({
   onShapesChange,
   clearanceOverride,
   onClearanceChange,
+  spacingOverride,
+  onSpacingChange,
   materializeError,
   onConvertToPolygon,
 }: Props) {
@@ -67,7 +71,9 @@ export function ShapeListPanel({
   const cycleMode = (s: ToolShape) => {
     if (s.type === 'line') return // lines are always guides
     const order: ToolShapeMode[] = ['add', 'subtract', 'guide']
-    update(s.id, { mode: order[(order.indexOf(s.mode) + 1) % order.length] })
+    const next = order[(order.indexOf(s.mode) + 1) % order.length]
+    // depth only means something on solids
+    update(s.id, { mode: next, ...(next !== 'add' ? { depth: null } : {}) })
   }
 
   return (
@@ -116,7 +122,12 @@ export function ShapeListPanel({
               ) : (
                 <Pencil className="w-3.5 h-3.5 text-text-muted shrink-0" />
               )}
-              <span className="text-[11px] text-text-primary truncate flex-1">{shapeDisplayName(s)}</span>
+              <span className="text-[11px] text-text-primary truncate flex-1">
+                {shapeDisplayName(s)}
+                {s.mode === 'add' && s.depth != null && (
+                  <span className="text-text-muted"> · {s.depth}mm</span>
+                )}
+              </span>
               <button
                 onClick={(e) => { e.stopPropagation(); cycleMode(s) }}
                 className={`px-1.5 py-0.5 rounded text-[9px] font-medium ${MODE_STYLE[s.mode]}`}
@@ -184,6 +195,21 @@ export function ShapeListPanel({
                 <Field label="Angle">
                   <NumberField value={s.rotation} min={-180} max={180} step={0.1} onCommit={(v) => update(s.id, { rotation: v })} className={FIELD_CLASS} />
                 </Field>
+                {s.mode === 'add' && s.type !== 'line' && (
+                  <Field label="Depth">
+                    <NumberField
+                      value={s.depth ?? null}
+                      min={5}
+                      max={200}
+                      step={0.5}
+                      nullable
+                      placeholder="default"
+                      onCommit={(v) => update(s.id, { depth: v })}
+                      onCommitNull={() => update(s.id, { depth: null })}
+                      className={FIELD_CLASS}
+                    />
+                  </Field>
+                )}
               </div>
             )}
           </div>
@@ -213,6 +239,22 @@ export function ShapeListPanel({
         </Field>
         <p className="text-[10px] text-text-muted leading-tight">
           Cutouts grow by this much per side in bins. Leave blank to use each bin&apos;s clearance; set 0 for an exact fit.
+        </p>
+        <Field label="Spacing">
+          <NumberField
+            value={spacingOverride}
+            min={0}
+            max={20}
+            step={0.25}
+            nullable
+            placeholder="bin default"
+            onCommit={(v) => onSpacingChange(v)}
+            onCommitNull={() => onSpacingChange(null)}
+            className={FIELD_CLASS}
+          />
+        </Field>
+        <p className="text-[10px] text-text-muted leading-tight">
+          Extra keep-out air gap when arranging tools in a bin (the cutout itself is unchanged). Use for tools that overhang their cutout.
         </p>
         <p className="text-[10px] text-text-muted leading-tight">
           Holes are carved after all solids are merged.

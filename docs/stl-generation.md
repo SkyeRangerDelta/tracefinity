@@ -4,6 +4,16 @@
 
 STL generation uses manifold3d (mesh booleans, 10-100x faster than OCCT B-rep). The gridfinity shell is constructed from first principles using `CrossSection` extrusions and `batch_boolean` operations. Polygon cutouts, finger holes, magnet holes and text labels are subtracted from the bin body in one pass.
 
+## Multi-level pockets (per-shape depth)
+
+A parametric tool whose add-shapes carry a `depth` materializes `Tool.levels`: adds grouped by depth value (`None` = the default group), every subtract carved out of every level, so `union(levels) == footprint`. At generate time the levels are transformed into bin space with the same centroid+rotation math `sync_placed_tools` uses (placements never store levels), and the generator cuts **one straight prism per level part**, each opening at the bin top — the union forms a stepped pocket with no overhangs by construction.
+
+- An explicit level depth is **absolute**; the placement `depth_override` only applies to the default-depth group. `insert_height` and the `[5, max_depth]` clamp apply uniformly.
+- Clearance buffers each level part the same as the footprint; overlapping buffered levels are harmless (the deeper prism wins in the union).
+- The chamfer stays on the footprint top edge, clamped to `shallowest_level_depth - 1`.
+- Known limitations: the contrast insert and text labels still use the flat footprint/default depth, not per-level floors.
+- `generate` re-syncs placements first and hashes `Tool.levels`, so depth-only edits invalidate the STL cache.
+
 ## Z-Axis Reference Heights
 
 - **Base top**: 4.75mm (three tapered layers: 2.15 + 1.8 + 0.8). Infill starts here.
